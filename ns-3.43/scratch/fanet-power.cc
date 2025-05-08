@@ -138,13 +138,20 @@ RoutingExperiment::RoutingExperiment()
 {
 }
 
+void
+checkMobility(Ptr<Node> node){
+     //NS_LOG_UNCOND("Node : | " << node->GetObject<MobilityModel>()->GetPosition().z);
+}
+
+
 static inline std::string
 PrintReceivedPacket(Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddress)
 {
     std::ostringstream oss;
 
     oss << Simulator::Now().GetSeconds() << " " << socket->GetNode()->GetId();
-
+    Time time = Seconds(1.0);
+    Simulator::Schedule(time ,checkMobility, socket->GetNode());
     if (InetSocketAddress::IsMatchingType(senderAddress))
     {
         InetSocketAddress addr = InetSocketAddress::ConvertFrom(senderAddress);
@@ -166,7 +173,7 @@ RoutingExperiment::ReceivePacket(Ptr<Socket> socket)
     {
         bytesTotal += packet->GetSize();
         packetsReceived += 1;
-        NS_LOG_UNCOND(PrintReceivedPacket(socket, packet, senderAddress));
+        //NS_LOG_UNCOND(PrintReceivedPacket(socket, packet, senderAddress));
     }
 }
 
@@ -266,7 +273,7 @@ RoutingExperiment::Run()
     std::string rate("2048bps");
     std::string phyMode("DsssRate11Mbps");
     std::string tr_name("manet-routing-compare");
-    int nodeSpeed = 20; // in m/s
+    int nodeSpeed = 15; // in m/s
     int nodePause = 0;  // in s
 
     Config::SetDefault("ns3::OnOffApplication::PacketSize", StringValue("64")); //In Bytes
@@ -328,6 +335,7 @@ RoutingExperiment::Run()
     pos.Set("X", StringValue("ns3::UniformRandomVariable[Min=0.0|Max=" + std::to_string(m_maxX) + ".0]"));
     pos.Set("Y", StringValue("ns3::UniformRandomVariable[Min=0.0|Max=" +  std::to_string(m_maxY) + ".0]"));
     pos.Set("Z", StringValue("ns3::UniformRandomVariable[Min=5.0|Max=100.0]"));
+    //pos.Set("Z", StringValue("ns3::UniformRandomVariable[Min=5.0|Max=5.0]"));
     Ptr<PositionAllocator> taPositionAlloc = pos.Create()->GetObject<PositionAllocator>();
     streamIndex += taPositionAlloc->AssignStreams(streamIndex);
 
@@ -451,23 +459,29 @@ RoutingExperiment::Run()
 
     //CheckThroughput();
 
-    Simulator::Stop(Seconds(m_TotalTime));
+    Simulator::Stop(Seconds(m_TotalTime + 30));
     Simulator::Run();
 
     if (m_flowMonitor)
     {
         flowmon->SerializeToXmlFile(tr_name + ".flowmon", false, false);
     }
-    std::ofstream out(m_CSVfileName, std::ios::app);
+    std::ofstream out(m_CSVfileName + ".csv", std::ios::app);
     std::ofstream out3(m_CSVSpecfileName, std::ios::app);
     for (int i = 0; i < m_nWifis; i++){
+        NS_LOG_UNCOND("Node : " << adhocNodes.Get(i));
+        
+        Ptr<MobilityModel> mobilityX =  adhocNodes.Get(i)->GetObject<MobilityModel>();
+        //NS_LOG_UNCOND("Mobility Model : " << mobilityX);
         Ptr<GenericBatteryModel> batteryX = DynamicCast<GenericBatteryModel>(energySourceContainer.Get(i));
         out << (1-(batteryX->GetRemainingEnergy()/batteryX->GetInitialEnergy()))*100 << "" << std::endl;
         if (i > m_nSinks*2){
             out3 << (1-(batteryX->GetRemainingEnergy()/batteryX->GetInitialEnergy()))*100 << "" << std::endl;
         }
-         //NS_LOG_UNCOND(" *Remaining Capacity * "
-         //        << "| Node " << i << ": " << batteryX->GetRemainingEnergy() << " J ");
+        //Vector position = mobilityX->GetPosition();
+        /*NS_LOG_UNCOND(" *Position * "
+                 << "| Node " << i << ": " << " x = " << position.x << ", y = " << position.y << " , z = " << position.z);
+    */
          //NS_LOG_UNCOND(" *SoC * "
          //        << "| Node " << i << ": " << batteryX->GetStateOfCharge() << " J ");
          //NS_LOG_UNCOND(" *Energy Used * "
@@ -481,6 +495,6 @@ RoutingExperiment::Run()
     //NS_LOG_UNCOND(m_TotalTime-100);
     std::ofstream out2(m_CSVfileName + "-SuccessRate.csv", std::ios::app);
     out2 << 100*packetsReceived/((2048.0/(64.0*8.0))*(m_TotalTime-100)*m_nSinks) << "" << std::endl;
-    NS_LOG_UNCOND(100*packetsReceived/((2048.0/(64.0*8.0))*(m_TotalTime-100)*m_nSinks));
+    //NS_LOG_UNCOND(100*packetsReceived/((2048.0/(64.0*8.0))*(m_TotalTime-100)*m_nSinks));
     Simulator::Destroy();
 }

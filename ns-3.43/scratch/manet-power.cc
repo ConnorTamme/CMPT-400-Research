@@ -216,6 +216,9 @@ RoutingExperiment::CommandSetup(int argc, char** argv)
     cmd.AddValue("TPow", "Transmission power", m_txp);
     cmd.Parse(argc, argv);
 
+    time_t time = std::time(0);
+    NS_LOG_UNCOND(time);
+    ns3::RngSeedManager::SetSeed(time);
     std::vector<std::string> allowedProtocols{"OLSR", "AODV", "DSDV", "DSR"};
 
     if (std::find(std::begin(allowedProtocols), std::end(allowedProtocols), m_protocolName) ==
@@ -244,7 +247,7 @@ RoutingExperiment::Run()
 
     if (m_NewCSV){
         // blank out the last output file and write the column headers
-        std::ofstream out(m_CSVfileName);
+        std::ofstream out(m_CSVfileName + ".csv");
         std::ofstream out3(m_CSVSpecfileName);
         out << "Remaining Power" << std::endl;
         out3 << "Remaining Power" << std::endl;
@@ -255,7 +258,7 @@ RoutingExperiment::Run()
             << "RoutingProtocol,"
             << "TransmissionPower" << std::endl;
         out.close();**/
-        std::ofstream out2(m_protocolName + "SuccessRate.csv");
+        std::ofstream out2(m_CSVfileName + "-SuccessRate.csv");
         out2 << "Success Rate" << std::endl;
     }
 
@@ -476,8 +479,8 @@ RoutingExperiment::Run()
     //NS_LOG_UNCOND(packetsReceived);
     //NS_LOG_UNCOND(2048.0/(64.0*8.0));
     //NS_LOG_UNCOND(m_TotalTime-100);
-    std::ofstream out2(m_protocolName + "SuccessRate.csv", std::ios::app);
-    out2 << 100*packetsReceived/((2048.0/(64.0*8.0))*(m_TotalTime-100)*m_nSinks);
+    std::ofstream out2(m_CSVfileName + "-SuccessRate.csv", std::ios::app);
+    out2 << 100*packetsReceived/((2048.0/(64.0*8.0))*(m_TotalTime-100)*m_nSinks) << "" << std::endl;
     NS_LOG_UNCOND(100*packetsReceived/((2048.0/(64.0*8.0))*(m_TotalTime-100)*m_nSinks));
     Simulator::Destroy();
 }
